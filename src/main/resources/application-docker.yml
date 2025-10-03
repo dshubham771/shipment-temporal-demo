@@ -1,0 +1,4 @@
+spring:
+  temporal:
+    connection:
+      target: temporal:7233

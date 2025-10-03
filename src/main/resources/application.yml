@@ -1,0 +1,23 @@
+server:
+  port: 9090
+
+spring:
+  application:
+    name: shipment-temporal
+  temporal:
+    connection:
+      target: localhost:7233
+    namespace: default
+
+    workers-auto-discovery:
+          packages:
+            - com.example.shipmentTemporal.service.temporal
+
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.shipment: DEBUG
+    io.temporal: INFO
+
