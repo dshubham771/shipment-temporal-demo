@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  api:
+    image: python:3.11-slim
+    working_dir: /app
+    command: bash -lc "pip install --no-cache-dir -r requirements.txt && python roulette.py"
+    volumes:
+      - ./:/app               # mount your code
+      - appdata:/data         # persistent sqlite DB
+    environment:
+      - PORT=8000
+      - FLASK_DEBUG=1
+      - FAILURE_RATE=0.4     # 0.0 to 1.0 (probability for POST/PUT/PATCH/DELETE to fail)
+      - RETRY_AFTER_MIN=1
+      - RETRY_AFTER_MAX=3
+      - DATABASE_URL=sqlite:////data/app.db
+      - ALLOW_RESET_WITHOUT_LOCK=1
+      - ENFORCE_ADJACENT=1
+    ports:
+      - "8000:8000"
+
+volumes:
+  appdata:

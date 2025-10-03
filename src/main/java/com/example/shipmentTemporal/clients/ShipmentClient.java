@@ -21,7 +21,8 @@ public class ShipmentClient {
 
     @Autowired
     private RestTemplate restTemplate;
-    private final String baseUrl = "http://localhost:8000";
+//    private final String baseUrl = "http://localhost:8000";
+    private final String baseUrl = "http://roulette:8000"; //for docker setup
 
     public Integer createShipment(CreateShipmentRequest request) {
         
