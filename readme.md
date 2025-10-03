@@ -19,7 +19,6 @@ curl http://localhost:9090/api/shipments/<workflowId>/result
 ```
 
 3. Get audit trail
-4. 
 ```
 curl http://localhost:9090/api/shipments/<workflowId>/audit-trail
 ```
