@@ -6,6 +6,7 @@ import com.example.shipmentTemporal.models.AuditTrailResponse;
 import com.example.shipmentTemporal.models.ShipmentRequest;
 import com.example.shipmentTemporal.models.ShipmentResponse;
 import com.example.shipmentTemporal.service.temporal.workflows.ShipmentWorkflow;
+import io.temporal.api.enums.v1.WorkflowIdReusePolicy;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import io.temporal.client.WorkflowStub;
@@ -28,11 +29,12 @@ public class ShipmentService {
         log.info("Starting shipment workflow for request: {}", request);
         
         try {
-            String workflowId = "shipment-" + request.getShipmentHandle() + "-" + UUID.randomUUID();
-            
+            String workflowId = "shipment-" + request.getShipmentHandle();
+
             WorkflowOptions options = WorkflowOptions.newBuilder()
                 .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
                 .setWorkflowId(workflowId)
+                .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY)
                 .setTaskQueue("shipment-workflow-queue")
                 .build();
             
