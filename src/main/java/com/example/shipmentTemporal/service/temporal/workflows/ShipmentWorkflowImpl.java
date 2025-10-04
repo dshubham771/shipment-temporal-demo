@@ -4,7 +4,9 @@ import com.example.shipmentTemporal.models.AuditEvent;
 import com.example.shipmentTemporal.models.HopMove;
 import com.example.shipmentTemporal.service.temporal.activities.ShipmentActivity;
 import io.temporal.activity.ActivityOptions;
+import io.temporal.api.enums.v1.RetryState;
 import io.temporal.common.RetryOptions;
+import io.temporal.failure.ActivityFailure;
 import io.temporal.spring.boot.WorkflowImpl;
 import io.temporal.workflow.Workflow;
 import lombok.extern.slf4j.Slf4j;
@@ -67,39 +69,38 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
                 }
 
                 log.info("Successfully moved to {}. Current index: {}", toCity, currentIndex);
-            } catch (Exception e) {
-                log.error("Failed to move from {} to {} after all retry attempts. Starting partial compensation...",
-                        fromCity, toCity, e);
-                
-                auditTrail.add(AuditEvent.failed(fromCity, toCity, e.getMessage()));
+            } catch (ActivityFailure e) {
+                if (e.getRetryState() == RetryState.RETRY_STATE_MAXIMUM_ATTEMPTS_REACHED) {
+                    log.error("Failed to move from {} to {} after all retry attempts. Starting partial compensation...",
+                            fromCity, toCity, e);
 
-                if (currentIndex == 0) {
-                    log.error("Failed at origin (first hop). Cannot rollback further.");
+                    auditTrail.add(AuditEvent.failed(fromCity, toCity, e.getMessage()));
+
+                    if (currentIndex == 0) {
+                        log.error("Failed at origin (first hop). Cannot rollback further.");
 //                    throw ApplicationFailure.newNonRetryableFailure(
 //                            "Shipment delivery failed at origin (" + fromCity + " -> " + toCity + "): ",
 //                            e.getMessage()
 //                    );
+                        retryCycle++;
+                        long backoffSeconds = Math.min(60, (long) Math.pow(2, retryCycle));
+                        Workflow.sleep(Duration.ofSeconds(backoffSeconds));
+                        continue;
+                    }
+
+                    HopMove lastMove = completedMoves.get(completedMoves.size() - 1);
+                    compensateLastMove(shipmentId, lastMove);
+                    completedMoves.remove(completedMoves.size() - 1);
+                    currentIndex--;
                     retryCycle++;
+
                     long backoffSeconds = Math.min(60, (long) Math.pow(2, retryCycle));
+                    log.info("Retry cycle {}: Waiting {} seconds before resuming from index {}",
+                            retryCycle, backoffSeconds, currentIndex);
                     Workflow.sleep(Duration.ofSeconds(backoffSeconds));
-                    continue;
+
+                    log.info("Resuming from {} (idx {}) after compensation", route.get(currentIndex), currentIndex);
                 }
-
-                HopMove lastMove = completedMoves.get(completedMoves.size() - 1);
-                log.info("Compensating last move: {} -> {}", lastMove.getFrom(), lastMove.getTo());
-                compensateLastMove(shipmentId, lastMove);
-
-                completedMoves.remove(completedMoves.size() - 1);
-                currentIndex--;
-                retryCycle++;
-
-                long backoffSeconds = Math.min(60,(long) Math.pow(2,retryCycle));
-
-                log.info("Retry cycle {}: Waiting {} seconds before resuming from index {}",
-                        retryCycle, backoffSeconds, currentIndex);
-                Workflow.sleep(Duration.ofSeconds(backoffSeconds));
-
-                log.info("Resuming from {} (idx {}) after compensation", route.get(currentIndex), currentIndex);
             }
         }
 
@@ -109,6 +110,7 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
     }
 
     private void compensateLastMove(Integer shipmentId, HopMove lastMove) {
+        log.info("Compensating last move: {} -> {}", lastMove.getFrom(), lastMove.getTo());
         int retryCycle = 0;
         while (true) {
             try {
