@@ -2,3 +2,7 @@ spring:
   temporal:
     connection:
       target: temporal:7233
+
+
+roulette-server:
+  baseUrl: http://roulette:8000

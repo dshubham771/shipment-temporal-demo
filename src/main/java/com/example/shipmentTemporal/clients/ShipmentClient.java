@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,8 +22,8 @@ public class ShipmentClient {
 
     @Autowired
     private RestTemplate restTemplate;
-//    private final String baseUrl = "http://localhost:8000";
-    private final String baseUrl = "http://roulette:8000"; //for docker setup
+    @Value("${roulette-server.baseUrl}")
+    private String baseUrl;
 
     public Integer createShipment(CreateShipmentRequest request) {
         

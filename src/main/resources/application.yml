@@ -21,3 +21,5 @@ logging:
     com.shipment: DEBUG
     io.temporal: INFO
 
+roulette-server:
+  baseUrl: http://localhost:8000
