@@ -2,6 +2,7 @@ package com.example.shipmentTemporal.service.temporal.workflows;
 
 import com.example.shipmentTemporal.models.AuditEvent;
 import com.example.shipmentTemporal.service.temporal.activities.ShipmentActivity;
+import com.example.shipmentTemporal.service.temporal.activities.ShipmentCompensationActivity;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.api.enums.v1.RetryState;
 import io.temporal.common.RetryOptions;
@@ -31,8 +32,21 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
                     .build())
             .build();
 
+    private final ActivityOptions activityOptionsCompensation = ActivityOptions.newBuilder()
+            .setStartToCloseTimeout(Duration.ofDays(30))
+            .setTaskQueue("shipment-activity-queue")
+            .setRetryOptions(RetryOptions.newBuilder()
+                    .setMaximumAttempts(0)
+                    .setInitialInterval(Duration.ofSeconds(2))
+                    .setMaximumInterval(Duration.ofSeconds(5))
+                    .build())
+            .build();
+
     private final ShipmentActivity activity =
             Workflow.newActivityStub(ShipmentActivity.class, activityOptions);
+
+    private final ShipmentCompensationActivity compensationActivity =
+            Workflow.newActivityStub(ShipmentCompensationActivity.class, activityOptionsCompensation);
 
     @Override
     public String executeShipment(String shipmentHandle) {
@@ -109,7 +123,7 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
         String to = route.get(currentIndex - 1);
         saga.addCompensation(
                 () -> {
-                    activity.compensateMove(shipmentId, from, to);
+                    compensationActivity.compensateMove(shipmentId, from, to);
                     auditTrail.add(AuditEvent.compensated(from, to, "Compensated last move"));
                 }
         );

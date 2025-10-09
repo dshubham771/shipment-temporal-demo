@@ -17,6 +17,4 @@ public interface ShipmentActivity {
     @ActivityMethod
     void moveShipment(Integer shipmentId, String from, String to);
 
-    @ActivityMethod
-    void compensateMove(Integer shipmentId, String from, String to);
 }
