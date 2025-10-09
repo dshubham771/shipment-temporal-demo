@@ -99,6 +99,32 @@ public class ShipmentClient {
         }
     }
 
+    public void resetShipment(ResetShipmentRequest request) {
+        log.info("Resetting shipment {} to origin with reason: {}", request.getShipmentId(), request.getReason());
+
+        try {
+            String url = baseUrl + "/shipments/" + request.getShipmentId() + "/reset";
+            HttpHeaders headers = getBasicHttpHeaders();
+            HttpEntity<ResetShipmentRequest> entity = new HttpEntity<>(request, headers);
+            ResponseEntity<ResetShipmentResponse> responseEntity =
+                    restTemplate.postForEntity(url, entity, ResetShipmentResponse.class);
+
+            ResetShipmentResponse response = responseEntity.getBody();
+
+            if (response != null && response.getSuccess() == true) {
+                log.info("Shipment {} reset successful. ", request.getShipmentId());
+                return;
+            }
+
+            throw new RuntimeException("Failed to reset shipment: empty response");
+        } catch (Exception e) {
+            log.error("Error while resetting shipment {}", request.getShipmentId(), e);
+            throw new RuntimeException("Failed to reset shipment: " + e.getMessage(), e);
+        }
+    }
+
+
+
     private static HttpHeaders getBasicHttpHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

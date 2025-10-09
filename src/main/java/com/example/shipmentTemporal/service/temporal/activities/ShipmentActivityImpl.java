@@ -51,4 +51,17 @@ public class ShipmentActivityImpl implements ShipmentActivity {
         }
     }
 
+    @Override
+    public void compensateMove(Integer shipmentId, String from, String to) {
+        log.info("Compensating move for shipment {} from {}", shipmentId, from);
+        try {
+            MoveRequest moveRequest = MoveRequest.builder().shipmentId(shipmentId).from(from).to(to).build();
+            apiClient.moveShipment(moveRequest);
+            log.info("Successfully compensated shipment from {} to {}", from, to);
+        } catch (Exception e) {
+            log.error("Failed to compensated shipment from {} to {}", from, to, e);
+            throw Activity.wrap(e);
+        }
+    }
+
 }

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +37,7 @@ public class ShipmentService {
                 .setWorkflowId(workflowId)
                 .setWorkflowIdReusePolicy(WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY)
                 .setTaskQueue("shipment-workflow-queue")
+                .setWorkflowExecutionTimeout(Duration.ofDays(1))
                 .build();
             
             ShipmentWorkflow workflow = workflowClient.newWorkflowStub(

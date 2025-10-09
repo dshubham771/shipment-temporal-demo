@@ -114,6 +114,17 @@ with app.app_context():
 @app.before_request
 def chaos():
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        endpoint_path = request.path
+
+        if request.method == "POST" and endpoint_path == "/shipments":
+            return None
+
+#         if request.method == "POST" and endpoint_path.endswith("/reset"):
+#             return None
+
+        if request.method == "GET" and endpoint_path == "/route":
+            return None
+
         import random as _r
         if _r.random() < max(0.0, min(1.0, FAILURE_RATE)):
             return (

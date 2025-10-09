@@ -4,8 +4,8 @@ import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 
 @ActivityInterface
-public interface ShipmentCompensationActivity {
+public interface ResetShipmentActivity {
 
     @ActivityMethod
-    void compensateMove(Integer shipmentId, String from, String to);
+    void resetToOrigin(Integer shipmentId);
 }

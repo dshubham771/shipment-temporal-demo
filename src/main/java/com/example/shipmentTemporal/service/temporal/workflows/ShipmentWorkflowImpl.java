@@ -2,7 +2,7 @@ package com.example.shipmentTemporal.service.temporal.workflows;
 
 import com.example.shipmentTemporal.models.AuditEvent;
 import com.example.shipmentTemporal.service.temporal.activities.ShipmentActivity;
-import com.example.shipmentTemporal.service.temporal.activities.ShipmentCompensationActivity;
+import com.example.shipmentTemporal.service.temporal.activities.ResetShipmentActivity;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.api.enums.v1.RetryState;
 import io.temporal.common.RetryOptions;
@@ -32,7 +32,7 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
                     .build())
             .build();
 
-    private final ActivityOptions activityOptionsCompensation = ActivityOptions.newBuilder()
+    private final ActivityOptions resetShipmentActivityOptions = ActivityOptions.newBuilder()
             .setStartToCloseTimeout(Duration.ofDays(30))
             .setTaskQueue("shipment-activity-queue")
             .setRetryOptions(RetryOptions.newBuilder()
@@ -42,11 +42,13 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
                     .build())
             .build();
 
+    private final ResetShipmentActivity resetShipmentActivity =
+            Workflow.newActivityStub(ResetShipmentActivity.class, resetShipmentActivityOptions);
+
     private final ShipmentActivity activity =
             Workflow.newActivityStub(ShipmentActivity.class, activityOptions);
 
-    private final ShipmentCompensationActivity compensationActivity =
-            Workflow.newActivityStub(ShipmentCompensationActivity.class, activityOptionsCompensation);
+
 
     @Override
     public String executeShipment(String shipmentHandle) {
@@ -95,7 +97,13 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
                         Workflow.sleep(Duration.ofSeconds(backoffSeconds));
                         continue;
                     }
-                    saga.compensate();
+                    try {
+                        saga.compensate();
+                    } catch (Exception compensationException) {
+                        currentIndex = 0;
+                        resetShipmentActivity.resetToOrigin(shipmentId);
+                        continue;
+                    }
 
                     currentIndex--;
                     retryCycle++;
@@ -123,7 +131,7 @@ public class ShipmentWorkflowImpl implements ShipmentWorkflow {
         String to = route.get(currentIndex - 1);
         saga.addCompensation(
                 () -> {
-                    compensationActivity.compensateMove(shipmentId, from, to);
+                    activity.compensateMove(shipmentId, from, to);
                     auditTrail.add(AuditEvent.compensated(from, to, "Compensated last move"));
                 }
         );
